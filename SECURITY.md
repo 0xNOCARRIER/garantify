@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Garantify, please **do not open a public issue**.
 
-Send a description of the issue to: **security@example.com**
+Send a description of the issue to: **contact@jellynet.fr**
 
 Please include:
 - A description of the vulnerability and its potential impact
