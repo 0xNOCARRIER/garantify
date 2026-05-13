@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Paramètres — Garantify{% endblock %}
+
+{% block content %}
+
+<nav class="g-nav">
+  <div class="g-container py-3 flex items-center justify-between">
+    <a href="/" class="g-wordmark">Garantify</a>
+    <div class="flex items-center gap-3">
+      <span class="text-sm g-text-muted hidden sm:inline">{{ user_email }}</span>
+      <a href="/" class="g-btn g-btn-secondary text-xs">← Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<div class="g-container py-8" style="max-width: 48rem;">
+
+  <h1 class="text-2xl font-bold mb-8" style="color: var(--text-primary);">Paramètres</h1>
+
+  <!-- Flash message -->
+  {% if let Some(f) = flash %}
+  <div class="g-alert mb-6 {% if f.is_success() %}g-alert-success{% else %}g-alert-error{% endif %}">
+    {{ f.message }}
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════════
+       Section 1 — Changement de mot de passe
+       ═══════════════════════════════════════════════ -->
+  <div class="g-card p-6 mb-6">
+    <h2 class="text-base font-bold mb-1" style="color: var(--text-primary);">
+      ▸ Mot de passe
+    </h2>
+    <p class="text-sm g-text-muted mb-5">
+      Après la modification, vous serez déconnecté et devrez vous reconnecter.
+    </p>
+
+    <form method="post" action="/settings/password" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div>
+        <label class="g-label">Mot de passe actuel</label>
+        <input type="password" name="current_password" required autocomplete="current-password"
+          class="g-input" placeholder="••••••••">
+      </div>
+      <div>
+        <label class="g-label">Nouveau mot de passe <span class="g-text-muted font-normal">(8 car. min.)</span></label>
+        <input type="password" name="new_password" required autocomplete="new-password"
+          class="g-input" placeholder="••••••••">
+      </div>
+      <div>
+        <label class="g-label">Confirmer le nouveau mot de passe</label>
+        <input type="password" name="new_password_confirm" required autocomplete="new-password"
+          class="g-input" placeholder="••••••••">
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" class="g-btn g-btn-primary">Changer le mot de passe</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       Section 2 — Notifications email
+       ═══════════════════════════════════════════════ -->
+  <div class="g-card p-6 mb-6">
+    <h2 class="text-base font-bold mb-1" style="color: var(--text-primary);">
+      ▸ Notifications email
+    </h2>
+    <p class="text-sm g-text-muted mb-5">
+      Par défaut, les alertes sont envoyées à <strong>{{ user_email }}</strong>.
+      Vous pouvez utiliser une adresse différente.
+    </p>
+
+    <form method="post" action="/settings/email" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div>
+        <label class="g-label">Adresse de notification <span class="g-text-muted font-normal">(laisser vide = adresse de connexion)</span></label>
+        <input type="email" name="notification_email"
+          value="{{ notification_email }}"
+          class="g-input" placeholder="{{ user_email }}">
+      </div>
+
+      <div class="flex items-center gap-3">
+        <input type="checkbox" name="notifications_email_enabled" value="on" id="email_enabled"
+          {% if notifications_email_enabled %}checked{% endif %}
+          class="accent-[#00b4d8] w-4 h-4 cursor-pointer">
+        <label for="email_enabled" class="text-sm cursor-pointer" style="color: var(--text-primary);">
+          Recevoir les alertes par email
+        </label>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" class="g-btn g-btn-primary">Enregistrer</button>
+      </div>
+    </form>
+
+    <form method="post" action="/settings/email/test" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="g-btn g-btn-secondary text-sm">
+        Envoyer un email de test → {{ effective_notification_email }}
+      </button>
+    </form>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       Section 3 — Notifications Slack
+       ═══════════════════════════════════════════════ -->
+  <div class="g-card p-6" x-data="{ showWebhook: false }">
+    <h2 class="text-base font-bold mb-1" style="color: var(--text-primary);">
+      ▸ Notifications Slack
+    </h2>
+    <p class="text-sm g-text-muted mb-2">
+      Recevez vos alertes directement dans un channel Slack via un Incoming Webhook.
+    </p>
+    <p class="text-xs g-text-muted mb-5 p-3 rounded" style="background: var(--bg-page); border: 1px solid var(--border);">
+      💡 <strong>Comment créer un webhook :</strong>
+      allez sur <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener" class="underline">api.slack.com/messaging/webhooks</a>,
+      créez une app Slack, activez « Incoming Webhooks », ajoutez-le à un channel.
+      L'URL ressemble à <code style="font-family: var(--font-mono);">https://hooks.slack.com/services/T…/B…/…</code>
+    </p>
+
+    <form method="post" action="/settings/slack" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div>
+        <label class="g-label">URL du webhook Slack</label>
+
+        {% if slack_configured %}
+        <div class="flex items-center gap-3 mb-2">
+          <code class="text-sm g-text-muted" style="font-family: var(--font-mono);">
+            https://hooks.slack.com/services/***/***/***
+          </code>
+          <button type="button" @click="showWebhook = true"
+            class="g-btn g-btn-secondary !text-xs !py-1 !px-3" x-show="!showWebhook">
+            Modifier
+          </button>
+        </div>
+        <input type="url" name="slack_webhook_url"
+          x-show="showWebhook"
+          placeholder="https://hooks.slack.com/services/…"
+          class="g-input">
+        {% else %}
+        <input type="url" name="slack_webhook_url"
+          placeholder="https://hooks.slack.com/services/…"
+          class="g-input">
+        {% endif %}
+
+        <p class="text-xs g-text-muted mt-1">Laisser vide pour supprimer le webhook configuré.</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <input type="checkbox" name="slack_notifications_enabled" value="on" id="slack_enabled"
+          {% if slack_notifications_enabled %}checked{% endif %}
+          class="accent-[#00b4d8] w-4 h-4 cursor-pointer">
+        <label for="slack_enabled" class="text-sm cursor-pointer" style="color: var(--text-primary);">
+          Recevoir les alertes sur Slack
+        </label>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" class="g-btn g-btn-primary">Enregistrer</button>
+      </div>
+    </form>
+
+    {% if slack_configured %}
+    <form method="post" action="/settings/slack/test" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="g-btn g-btn-secondary text-sm">Tester la connexion Slack</button>
+    </form>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

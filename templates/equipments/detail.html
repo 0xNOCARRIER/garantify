@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ eq.name }} — Garantify{% endblock %}
+
+{% block content %}
+
+<!-- Navbar -->
+<nav class="g-nav">
+  <div class="g-container py-3">
+    <a href="/" class="g-wordmark">Garantify</a>
+  </div>
+</nav>
+
+<div class="g-container py-8" style="max-width: 42rem;">
+
+  <!-- Fil d'Ariane -->
+  <div class="flex items-center gap-2 mb-6 text-sm g-text-muted">
+    <a href="/">Dashboard</a>
+    <span>/</span>
+    <span style="color: var(--text-primary);">{{ eq.name }}</span>
+  </div>
+
+  <div class="g-card overflow-hidden">
+
+    <!-- Image -->
+    {% if let Some(img) = eq.image_path.as_ref() %}
+    <img src="/uploads/{{ img }}" alt="{{ eq.name }}"
+      class="w-full h-56 object-contain p-4"
+      style="background: var(--bg-page);">
+    <hr class="g-divider">
+    {% endif %}
+
+    <!-- En-tête : nom + statut -->
+    <div class="p-6 pb-4 flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold mb-1" style="color: var(--text-primary);">{{ eq.name }}</h1>
+        {% if let Some(desc) = eq.description.as_ref() %}
+        <p class="text-sm g-text-muted">{{ desc }}</p>
+        {% endif %}
+      </div>
+      <span class="{{ eq.badge_class() }} shrink-0">{{ eq.status_text() }}</span>
+    </div>
+
+    <hr class="g-divider">
+
+    <!-- Données -->
+    <dl class="px-6 py-2">
+      <div class="g-data-row">
+        <dt>Catégorie</dt>
+        <dd>{{ eq.category_label() }}</dd>
+      </div>
+      <div class="g-data-row">
+        <dt>Type d'achat</dt>
+        <dd>{% if eq.purchase_type == "online" %}En ligne{% else %}En magasin{% endif %}</dd>
+      </div>
+      {% if let Some(url) = eq.product_url.as_ref() %}
+      <div class="g-data-row">
+        <dt>URL produit</dt>
+        <dd class="truncate max-w-xs">
+          <a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>
+        </dd>
+      </div>
+      {% endif %}
+      <div class="g-data-row">
+        <dt>Date d'achat</dt>
+        <dd><time>{{ eq.purchase_date }}</time></dd>
+      </div>
+      <div class="g-data-row">
+        <dt>Durée de garantie</dt>
+        <dd>{{ eq.warranty_months }} mois</dd>
+      </div>
+      <div class="g-data-row">
+        <dt>Fin de garantie</dt>
+        <dd><time style="font-family: var(--font-mono);">{{ eq.warranty_end_date }}</time></dd>
+      </div>
+      {% if let Some(inv) = eq.invoice_path.as_ref() %}
+      <div class="g-data-row">
+        <dt>Facture</dt>
+        <dd>
+          <a href="/uploads/{{ inv }}" target="_blank" rel="noopener"
+            class="g-btn g-btn-secondary !text-xs !py-1 !px-3">
+            📄 Télécharger
+          </a>
+        </dd>
+      </div>
+      {% endif %}
+    </dl>
+
+  </div>
+
+  <!-- Actions -->
+  <div class="flex gap-3 mt-5">
+    <a href="/equipments/{{ eq.id }}/edit" class="g-btn g-btn-primary flex-1 justify-center">
+      Modifier
+    </a>
+    <form method="post" action="/equipments/{{ eq.id }}/delete"
+      onsubmit="return confirm('Supprimer définitivement cet équipement ?')">
+      <button type="submit" class="g-btn g-btn-danger">Supprimer</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,2 @@
+-- Migration initiale (Phase 1 : squelette)
+-- Le schéma complet sera ajouté en Phase 2 (auth) et Phase 3 (équipements).

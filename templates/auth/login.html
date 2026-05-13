@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Connexion — Garantify{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen items-center justify-center p-4">
+  <div class="w-full max-w-sm">
+
+    <div class="text-center mb-6">
+      <a href="/" class="g-wordmark" style="font-size: 2rem;">Garantify</a>
+      <p class="text-sm g-text-muted mt-2">Gestion de vos garanties</p>
+    </div>
+
+    <div class="g-card g-card-accent p-8">
+      <h1 class="text-lg font-bold mb-6" style="color: var(--text-primary);">Connexion</h1>
+
+      {% if let Some(err) = error %}
+      <div class="g-alert g-alert-error mb-5">{{ err }}</div>
+      {% endif %}
+
+      <form method="post" action="/login" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div>
+          <label for="email" class="g-label">Email</label>
+          <input id="email" type="email" name="email" required autocomplete="email"
+            class="g-input" placeholder="vous@exemple.com">
+        </div>
+
+        <div>
+          <label for="password" class="g-label">Mot de passe</label>
+          <input id="password" type="password" name="password" required autocomplete="current-password"
+            class="g-input" placeholder="••••••••">
+        </div>
+
+        <button type="submit" class="g-btn g-btn-primary w-full justify-center mt-2">
+          Se connecter →
+        </button>
+      </form>
+
+      <hr class="g-divider my-5">
+
+      <div class="space-y-2 text-sm text-center">
+        <div><a href="/password/forgot" class="g-text-muted hover:underline">Mot de passe oublié ?</a></div>
+        <div class="g-text-muted">Pas encore de compte ? <a href="/register" style="color: var(--accent-primary); font-weight: 600;">S'inscrire</a></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

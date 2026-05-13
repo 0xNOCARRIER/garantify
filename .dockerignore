@@ -1,0 +1,10 @@
+target/
+.git/
+.env
+.env.local
+docs/
+scripts/
+*.md
+.gitignore
+.dockerignore
+tests/

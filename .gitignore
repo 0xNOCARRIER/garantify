@@ -1,0 +1,30 @@
+# Rust build artifacts
+/target
+
+# Environment variables (contains secrets — never commit)
+.env
+.env.local
+
+# Logs
+*.log
+
+# Uploaded files and local data
+/data
+/uploads
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SQLite (not used but just in case)
+*.db
+*.sqlite
+*.sqlite3
+
+# Claude Code internal file (not relevant for contributors)
+CLAUDE.md

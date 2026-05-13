@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Mes garanties — Garantify{% endblock %}
+
+{% block content %}
+
+<!-- Navbar -->
+<nav class="g-nav">
+  <div class="g-container py-3 flex items-center justify-between">
+    <a href="/" class="g-wordmark">Garantify</a>
+    <div class="flex items-center gap-3">
+      <span class="text-sm g-text-muted hidden sm:inline">{{ user_email }}</span>
+      <a href="/settings" class="g-btn g-btn-secondary text-sm !px-3" title="Paramètres">⚙</a>
+      <form method="post" action="/logout">
+        <button type="submit" class="g-btn g-btn-secondary text-sm">Déconnexion</button>
+      </form>
+      <a href="/equipments/new" class="g-btn g-btn-primary text-sm">+ Ajouter</a>
+    </div>
+  </div>
+</nav>
+
+<div class="g-container py-8">
+
+  <!-- Barre de stats -->
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="g-stat-card">
+      <span class="stat-value" style="color: var(--accent-primary);">{{ total }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="g-stat-card">
+      <span class="stat-value" style="color: var(--status-warning);">{{ expiring_count }}</span>
+      <span class="stat-label">Expire bientôt</span>
+    </div>
+    <div class="g-stat-card">
+      <span class="stat-value" style="color: var(--status-danger);">{{ expired_count }}</span>
+      <span class="stat-label">Expirés</span>
+    </div>
+  </div>
+
+  {% if equipments.is_empty() %}
+  <!-- État vide -->
+  <div class="g-card p-16 text-center">
+    <div class="text-6xl mb-4">📦</div>
+    <h2 class="text-xl font-bold mb-2" style="color: var(--text-primary);">Aucun équipement</h2>
+    <p class="g-text-muted mb-6 text-sm">Ajoutez votre premier équipement pour commencer le suivi des garanties.</p>
+    <a href="/equipments/new" class="g-btn g-btn-primary">+ Ajouter un équipement</a>
+  </div>
+
+  {% else %}
+
+  <!-- Filtres Alpine.js -->
+  <div x-data="{
+    search: '',
+    category: '',
+    status: '',
+    show(el) {
+      const name = (el.dataset.name || '').toLowerCase();
+      const cat  = el.dataset.category || '';
+      const stat = el.dataset.status || '';
+      return (!this.search   || name.includes(this.search.toLowerCase()))
+          && (!this.category || cat  === this.category)
+          && (!this.status   || stat === this.status);
+    }
+  }">
+
+    <!-- Barre de filtres -->
+    <div class="flex flex-wrap gap-3 mb-6">
+      <input
+        x-model="search"
+        type="text"
+        placeholder="Rechercher par nom…"
+        class="g-input flex-1 min-w-48">
+
+      <select x-model="category" class="g-input w-auto">
+        <option value="">Toutes catégories</option>
+        <option value="electromenager">Électroménager</option>
+        <option value="informatique">Informatique</option>
+        <option value="multimedia">Multimédia</option>
+        <option value="autre">Autre</option>
+      </select>
+
+      <select x-model="status" class="g-input w-auto">
+        <option value="">Tous statuts</option>
+        <option value="valid">Valide</option>
+        <option value="expiring">Expire bientôt</option>
+        <option value="expired">Expiré</option>
+      </select>
+
+      <button @click="search=''; category=''; status='';"
+        class="g-btn g-btn-secondary text-sm">Réinitialiser</button>
+    </div>
+
+    <!-- Grille d'équipements -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {% for eq in equipments %}
+      <div
+        data-name="{{ eq.name }}"
+        data-category="{{ eq.category }}"
+        data-status="{{ eq.status_label() }}"
+        x-show="show($el)"
+        class="g-card overflow-hidden cursor-pointer relative flex flex-col">
+
+        <a href="/equipments/{{ eq.id }}" class="absolute inset-0 z-0" aria-label="{{ eq.name }}"></a>
+
+        <!-- Image ou emoji placeholder -->
+        {% if let Some(img) = eq.image_path.as_ref() %}
+        <img src="/uploads/{{ img }}" alt="{{ eq.name }}"
+          class="w-full h-44 object-contain p-3"
+          style="background: var(--bg-page);">
+        {% else %}
+        <div class="w-full h-44 flex items-center justify-center text-5xl"
+          style="background: var(--bg-page);">
+          {% if eq.category == "informatique" %}💻
+          {% else if eq.category == "electromenager" %}🏠
+          {% else if eq.category == "multimedia" %}📺
+          {% else %}📦{% endif %}
+        </div>
+        {% endif %}
+
+        <hr class="g-divider">
+
+        <div class="p-4 flex-1 flex flex-col gap-2">
+          <div class="flex justify-between items-start">
+            <h2 class="font-semibold text-sm leading-tight" style="color: var(--text-primary);">{{ eq.name }}</h2>
+            <span class="text-xs ml-2 shrink-0 g-text-muted">{{ eq.category_label() }}</span>
+          </div>
+
+          <span class="{{ eq.badge_class() }} self-start">{{ eq.status_text() }}</span>
+
+          <p class="text-xs g-text-muted">Fin : <time>{{ eq.warranty_end_date }}</time></p>
+
+          <!-- Actions — z-10 pour passer au-dessus du lien de tuile -->
+          <div class="relative z-10 flex gap-2 mt-auto pt-3"
+            style="border-top: var(--border-width) solid var(--border);">
+            <a href="/equipments/{{ eq.id }}/edit"
+              class="g-btn g-btn-secondary !text-xs !py-1 !px-3">Modifier</a>
+            <form method="post" action="/equipments/{{ eq.id }}/delete" class="ml-auto"
+              onsubmit="return confirm('Supprimer cet équipement ?')">
+              <button type="submit" class="g-btn g-btn-danger !text-xs !py-1 !px-3">Supprimer</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Message filtre vide -->
+    <p class="text-center g-text-muted text-sm py-8 hidden"
+      x-show="document.querySelectorAll('[data-name][x-show]').length > 0 &&
+               document.querySelectorAll('[data-name][style*=\'none\']').length ===
+               document.querySelectorAll('[data-name]').length">
+      Aucun équipement ne correspond aux filtres.
+    </p>
+
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

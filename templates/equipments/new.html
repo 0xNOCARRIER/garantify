@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Nouvel équipement — Garantify{% endblock %}
+
+{% block content %}
+
+<!-- Navbar -->
+<nav class="g-nav">
+  <div class="g-container py-3">
+    <a href="/" class="g-wordmark">Garantify</a>
+  </div>
+</nav>
+
+<div class="g-container py-8" style="max-width: 42rem;">
+
+  <!-- Fil d'Ariane -->
+  <div class="flex items-center gap-2 mb-6 text-sm g-text-muted">
+    <a href="/">Dashboard</a>
+    <span>/</span>
+    <span style="color: var(--text-primary);">Nouvel équipement</span>
+  </div>
+
+  {% if let Some(err) = error %}
+  <div class="g-alert g-alert-error mb-5">{{ err }}</div>
+  {% endif %}
+
+  <form method="post" action="/equipments/new" enctype="multipart/form-data"
+    x-data="{
+      type: 'online',
+      scraping: false,
+      scrapeError: '',
+      previewImage: '',
+      async prefill() {
+        const url = this.$refs.productUrl.value.trim();
+        if (!url) { this.scrapeError = 'Entrez une URL d\'abord.'; return; }
+        this.scraping = true;
+        this.scrapeError = '';
+        try {
+          const resp = await fetch('/api/scrape-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+          });
+          const data = await resp.json();
+          if (data.error) {
+            this.scrapeError = data.error;
+          } else {
+            if (data.name)        this.$refs.name.value = data.name;
+            if (data.description) this.$refs.description.value = data.description;
+            if (data.image_url) {
+              this.previewImage = data.image_url;
+              this.$refs.scrapedImageUrl.value = data.image_url;
+            }
+          }
+        } catch (e) {
+          this.scrapeError = 'Erreur réseau, réessayez.';
+        } finally {
+          this.scraping = false;
+        }
+      }
+    }">
+
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="scraped_image_url" x-ref="scrapedImageUrl" value="">
+
+    <div class="g-card p-6 space-y-6">
+
+      <!-- Section : Type & Source -->
+      <div>
+        <p class="g-section-label">Source du produit</p>
+        <div class="space-y-4">
+
+          <!-- Type d'achat -->
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="purchase_type" value="online" x-model="type" class="accent-[#00b4d8]">
+              <span class="text-sm font-medium" style="color: var(--text-primary);">En ligne</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="purchase_type" value="physical" x-model="type" class="accent-[#00b4d8]">
+              <span class="text-sm font-medium" style="color: var(--text-primary);">En magasin</span>
+            </label>
+          </div>
+
+          <!-- URL + bouton Préremplir (online) -->
+          <div x-show="type === 'online'">
+            <label class="g-label">URL du produit</label>
+            <div class="flex gap-2">
+              <input type="url" name="product_url" x-ref="productUrl"
+                placeholder="https://…"
+                class="g-input">
+              <button type="button" @click="prefill()" :disabled="scraping"
+                class="g-btn g-btn-secondary whitespace-nowrap disabled:opacity-50">
+                <span x-text="scraping ? 'Chargement…' : '✨ Préremplir'"></span>
+              </button>
+            </div>
+            <p x-show="scrapeError" x-text="scrapeError" class="text-xs mt-1" style="color: var(--status-danger);"></p>
+            <img x-show="previewImage" :src="previewImage" alt="Aperçu"
+              class="mt-2 h-20 w-20 object-contain rounded border-2 p-1"
+              style="border-color: var(--border); background: var(--bg-page);">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section : Informations produit -->
+      <div>
+        <p class="g-section-label">Informations produit</p>
+        <div class="space-y-4">
+
+          <!-- Image -->
+          <div>
+            <label class="g-label">
+              <span x-show="type === 'physical'">Photo de l'équipement</span>
+              <span x-show="type === 'online'">Photo <span class="g-text-muted font-normal">(optionnel — remplace l'image automatique)</span></span>
+            </label>
+            <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
+              class="block w-full text-sm g-text-muted
+                     file:mr-3 file:py-1.5 file:px-4 file:rounded file:border-0
+                     file:text-sm file:font-semibold file:cursor-pointer
+                     file:bg-cyan-400 file:text-gray-900">
+            <p class="text-xs g-text-muted mt-1">JPG, PNG ou WebP — max {{ max_upload_mb }} Mo</p>
+          </div>
+
+          <!-- Nom -->
+          <div>
+            <label class="g-label">Nom <span style="color: var(--status-danger);">*</span></label>
+            <input type="text" name="name" x-ref="name" required value="{{ name }}" class="g-input"
+              placeholder="Ex : MacBook Pro 14"">
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label class="g-label">Description</label>
+            <textarea name="description" x-ref="description" rows="2" class="g-input resize-none"
+              placeholder="Modèle, couleur, numéro de série…">{{ description }}</textarea>
+          </div>
+
+          <!-- Catégorie -->
+          <div>
+            <label class="g-label">Catégorie <span style="color: var(--status-danger);">*</span></label>
+            <select name="category" required class="g-input">
+              <option value="">— Choisir —</option>
+              <option value="electromenager">Électroménager</option>
+              <option value="informatique">Informatique</option>
+              <option value="multimedia">Multimédia</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section : Garantie -->
+      <div>
+        <p class="g-section-label">Garantie</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="g-label">Date d'achat <span style="color: var(--status-danger);">*</span></label>
+            <input type="date" name="purchase_date" required value="{{ purchase_date }}" class="g-input">
+          </div>
+          <div>
+            <label class="g-label">Durée (mois) <span style="color: var(--status-danger);">*</span></label>
+            <input type="number" name="warranty_months" required min="1" max="240"
+              value="{{ warranty_months }}" class="g-input" placeholder="24">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section : Documents -->
+      <div>
+        <p class="g-section-label">Documents</p>
+        <div>
+          <label class="g-label">Facture (PDF)</label>
+          <input type="file" name="invoice" accept="application/pdf"
+            class="block w-full text-sm g-text-muted
+                   file:mr-3 file:py-1.5 file:px-4 file:rounded file:border-0
+                   file:text-sm file:font-semibold file:cursor-pointer
+                   file:bg-gray-200 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-300">
+          <p class="text-xs g-text-muted mt-1">PDF — max {{ max_upload_mb }} Mo</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-4 flex gap-3">
+      <button type="submit" class="g-btn g-btn-primary flex-1 justify-center">
+        Enregistrer l'équipement
+      </button>
+      <a href="/" class="g-btn g-btn-secondary">Annuler</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

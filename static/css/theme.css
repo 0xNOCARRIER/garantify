@@ -1,0 +1,396 @@
+/* ================================================================
+   Garantify — Design System "Aqua 90s Océan"
+   Variables CSS (light + dark) + typographie de base
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   Palette & tokens — mode clair
+   ---------------------------------------------------------------- */
+:root {
+  /* Fonds */
+  --bg-page:        #f0f4f8;
+  --bg-card:        #ffffff;
+  --bg-sidebar:     #ffffff;
+
+  /* Bordures */
+  --border:         #1a1a2e;
+  --border-width:   2px;
+
+  /* Texte */
+  --text-primary:   #1a1a2e;
+  --text-secondary: #4a5568;
+  --text-muted:     #718096;
+
+  /* Accent principal — Aqua */
+  --accent-primary:      #00b4d8;
+  --accent-primary-dark: #0077b6;
+  --accent-primary-text: #ffffff;
+
+  /* Accent secondaire — Corail */
+  --accent-secondary:      #ff6b6b;
+  --accent-secondary-dark: #e05252;
+
+  /* Accent tertiaire — Menthe */
+  --accent-tertiary: #48cae4;
+
+  /* Statuts */
+  --status-ok:      #06d6a0;
+  --status-warning: #ffd166;
+  --status-danger:  #ff6b6b;
+
+  /* Shadows "hard" (décalé, sans blur) */
+  --shadow-card:   4px 4px 0px var(--border);
+  --shadow-btn:    3px 3px 0px var(--border);
+  --shadow-input:  2px 2px 0px var(--border);
+
+  /* Typographie */
+  --font-sans: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Rayons */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* ----------------------------------------------------------------
+   Palette & tokens — mode sombre
+   ---------------------------------------------------------------- */
+.dark {
+  --bg-page:        #0d1117;
+  --bg-card:        #161b22;
+  --bg-sidebar:     #161b22;
+
+  --border:         #00b4d8;
+
+  --text-primary:   #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted:     #6e7681;
+
+  --accent-primary:      #00b4d8;
+  --accent-primary-dark: #48cae4;
+  --accent-primary-text: #0d1117;
+
+  --accent-secondary:      #ff6b6b;
+  --accent-secondary-dark: #ff8e8e;
+
+  --status-ok:      #06d6a0;
+  --status-warning: #ffd166;
+  --status-danger:  #ff6b6b;
+
+  --shadow-card:   4px 4px 0px var(--border);
+  --shadow-btn:    3px 3px 0px var(--border);
+  --shadow-input:  2px 2px 0px var(--border);
+}
+
+/* ----------------------------------------------------------------
+   Base typographie
+   ---------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--accent-primary-dark);
+}
+
+code, pre, time {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+/* ----------------------------------------------------------------
+   Composants atomiques
+   ---------------------------------------------------------------- */
+
+/* Carte de base */
+.g-card {
+  background: var(--bg-card);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.g-card:hover {
+  box-shadow: 6px 6px 0px var(--border);
+  transform: translate(-1px, -1px);
+}
+
+/* Bouton primaire */
+.g-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-btn);
+  cursor: pointer;
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+  text-decoration: none;
+}
+
+.g-btn:active {
+  box-shadow: 1px 1px 0px var(--border);
+  transform: translate(2px, 2px);
+}
+
+.g-btn-primary {
+  background: var(--accent-primary);
+  color: var(--accent-primary-text);
+}
+
+.g-btn-primary:hover {
+  background: var(--accent-primary-dark);
+  color: var(--accent-primary-text);
+}
+
+.g-btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.g-btn-secondary:hover {
+  background: var(--bg-page);
+}
+
+.g-btn-danger {
+  background: var(--accent-secondary);
+  color: #ffffff;
+}
+
+.g-btn-danger:hover {
+  background: var(--accent-secondary-dark);
+  color: #ffffff;
+}
+
+/* Champ de formulaire */
+.g-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-input);
+  outline: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.g-input:focus {
+  box-shadow: 2px 2px 0px var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.g-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Badge statut */
+.g-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+}
+
+.g-badge-ok      { color: var(--status-ok); }
+.g-badge-warning { color: var(--status-warning); }
+.g-badge-danger  { color: var(--status-danger); }
+
+/* Alerte / flash message */
+.g-alert {
+  padding: 0.75rem 1rem;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-input);
+}
+
+.g-alert-error {
+  background: #fff0f0;
+  border-color: var(--status-danger);
+  color: var(--status-danger);
+}
+
+.dark .g-alert-error {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* ----------------------------------------------------------------
+   Helpers utilitaires
+   ---------------------------------------------------------------- */
+.g-text-muted     { color: var(--text-muted); }
+.g-text-secondary { color: var(--text-secondary); }
+
+/* Navigation top */
+.g-nav {
+  background: var(--bg-card);
+  border-bottom: var(--border-width) solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/* Wordmark / logo texte */
+.g-wordmark {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--accent-primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+.g-wordmark:hover { color: var(--accent-primary-dark); }
+
+/* Label de formulaire */
+.g-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+/* Séparateur */
+.g-divider {
+  border: none;
+  border-top: var(--border-width) solid var(--border);
+  margin: 0;
+}
+
+/* Alerte succès */
+.g-alert-success {
+  background: rgba(6, 214, 160, 0.1);
+  border-color: var(--status-ok);
+  color: var(--status-ok);
+}
+
+/* ----------------------------------------------------------------
+   Composants supplémentaires
+   ---------------------------------------------------------------- */
+
+/* Accent coloré en haut d'une carte */
+.g-card-accent {
+  border-top: 4px solid var(--accent-primary) !important;
+}
+
+/* Titre de section dans un formulaire */
+.g-section-label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding-bottom: 0.5rem;
+  border-bottom: var(--border-width) solid var(--border);
+  margin-bottom: 1.25rem;
+}
+
+/* Rangée de données (dl, table-like) */
+.g-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.g-data-row:last-child { border-bottom: none; }
+.g-data-row dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.g-data-row dd {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* ----------------------------------------------------------------
+   Layout
+   ---------------------------------------------------------------- */
+.g-container {
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Mini carte statistique */
+.g-stat-card {
+  background: var(--bg-card);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.g-stat-card .stat-value {
+  font-family: var(--font-sans);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.g-stat-card .stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}

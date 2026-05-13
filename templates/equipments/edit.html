@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Modifier {{ eq.name }} — Garantify{% endblock %}
+
+{% block content %}
+
+<!-- Navbar -->
+<nav class="g-nav">
+  <div class="g-container py-3">
+    <a href="/" class="g-wordmark">Garantify</a>
+  </div>
+</nav>
+
+<div class="g-container py-8" style="max-width: 42rem;">
+
+  <!-- Fil d'Ariane -->
+  <div class="flex items-center gap-2 mb-6 text-sm g-text-muted">
+    <a href="/">Dashboard</a>
+    <span>/</span>
+    <a href="/equipments/{{ eq.id }}">{{ eq.name }}</a>
+    <span>/</span>
+    <span style="color: var(--text-primary);">Modifier</span>
+  </div>
+
+  {% if let Some(err) = error %}
+  <div class="g-alert g-alert-error mb-5">{{ err }}</div>
+  {% endif %}
+
+  <form method="post" action="/equipments/{{ eq.id }}/edit" enctype="multipart/form-data"
+    x-data="{ type: '{{ eq.purchase_type }}' }">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="g-card p-6 space-y-6">
+
+      <!-- Section : Source -->
+      <div>
+        <p class="g-section-label">Source du produit</p>
+        <div class="space-y-4">
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="purchase_type" value="online" x-model="type" class="accent-[#00b4d8]">
+              <span class="text-sm font-medium" style="color: var(--text-primary);">En ligne</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="purchase_type" value="physical" x-model="type" class="accent-[#00b4d8]">
+              <span class="text-sm font-medium" style="color: var(--text-primary);">En magasin</span>
+            </label>
+          </div>
+          <div x-show="type === 'online'">
+            <label class="g-label">URL du produit</label>
+            <input type="url" name="product_url"
+              value="{{ eq.product_url.as_deref().unwrap_or("") }}"
+              class="g-input" placeholder="https://…">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section : Informations produit -->
+      <div>
+        <p class="g-section-label">Informations produit</p>
+        <div class="space-y-4">
+
+          <!-- Image -->
+          <div>
+            <label class="g-label">
+              <span x-show="type === 'physical'">Nouvelle photo</span>
+              <span x-show="type === 'online'">Photo <span class="g-text-muted font-normal">(optionnel)</span></span>
+            </label>
+            {% if let Some(img) = eq.image_path.as_ref() %}
+            <div class="mb-2 flex items-center gap-3">
+              <img src="/uploads/{{ img }}" alt="Photo actuelle"
+                class="h-16 w-16 object-contain rounded border-2 p-1"
+                style="border-color: var(--border); background: var(--bg-page);">
+              <p class="text-xs g-text-muted">Image actuelle — laisser vide pour conserver</p>
+            </div>
+            {% endif %}
+            <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
+              class="block w-full text-sm g-text-muted
+                     file:mr-3 file:py-1.5 file:px-4 file:rounded file:border-0
+                     file:text-sm file:font-semibold file:cursor-pointer
+                     file:bg-cyan-400 file:text-gray-900">
+            <p class="text-xs g-text-muted mt-1">JPG, PNG ou WebP — max {{ max_upload_mb }} Mo</p>
+          </div>
+
+          <!-- Nom -->
+          <div>
+            <label class="g-label">Nom <span style="color: var(--status-danger);">*</span></label>
+            <input type="text" name="name" required value="{{ eq.name }}" class="g-input">
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label class="g-label">Description</label>
+            <textarea name="description" rows="2" class="g-input resize-none">{{ eq.description.as_deref().unwrap_or("") }}</textarea>
+          </div>
+
+          <!-- Catégorie -->
+          <div>
+            <label class="g-label">Catégorie <span style="color: var(--status-danger);">*</span></label>
+            <select name="category" required class="g-input">
+              <option value="electromenager" {% if eq.category == "electromenager" %}selected{% endif %}>Électroménager</option>
+              <option value="informatique"   {% if eq.category == "informatique"   %}selected{% endif %}>Informatique</option>
+              <option value="multimedia"     {% if eq.category == "multimedia"     %}selected{% endif %}>Multimédia</option>
+              <option value="autre"          {% if eq.category == "autre"          %}selected{% endif %}>Autre</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section : Garantie -->
+      <div>
+        <p class="g-section-label">Garantie</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="g-label">Date d'achat <span style="color: var(--status-danger);">*</span></label>
+            <input type="date" name="purchase_date" required value="{{ eq.purchase_date }}" class="g-input">
+          </div>
+          <div>
+            <label class="g-label">Durée (mois) <span style="color: var(--status-danger);">*</span></label>
+            <input type="number" name="warranty_months" required min="1" max="240"
+              value="{{ eq.warranty_months }}" class="g-input">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section : Documents -->
+      <div>
+        <p class="g-section-label">Documents</p>
+        <div>
+          <label class="g-label">Nouvelle facture (PDF)</label>
+          {% if let Some(inv) = eq.invoice_path.as_ref() %}
+          <p class="text-xs g-text-muted mb-2">
+            <a href="/uploads/{{ inv }}" target="_blank" class="underline">📄 Facture actuelle</a>
+            — laisser vide pour conserver
+          </p>
+          {% endif %}
+          <input type="file" name="invoice" accept="application/pdf"
+            class="block w-full text-sm g-text-muted
+                   file:mr-3 file:py-1.5 file:px-4 file:rounded file:border-0
+                   file:text-sm file:font-semibold file:cursor-pointer
+                   file:bg-gray-200 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-300">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-4 flex gap-3">
+      <button type="submit" class="g-btn g-btn-primary flex-1 justify-center">
+        Enregistrer les modifications
+      </button>
+      <a href="/equipments/{{ eq.id }}" class="g-btn g-btn-secondary">Annuler</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
