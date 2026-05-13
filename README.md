@@ -2,7 +2,8 @@
 
 Self-hosted warranty tracker — get email and Slack alerts before your equipment warranties expire.
 
-![Build](https://img.shields.io/badge/build-passing-brightgreen) <!-- replace with real CI badge -->
+[![CI](https://github.com/0xNOCARRIER/garantify/actions/workflows/ci.yml/badge.svg)](https://github.com/0xNOCARRIER/garantify/actions/workflows/ci.yml)
+[![GHCR](https://img.shields.io/badge/ghcr.io-garantify-blue?logo=docker)](https://github.com/0xNOCARRIER/garantify/pkgs/container/garantify)
 
 ![Screenshot](docs/screenshot.png) <!-- add screenshot to docs/ -->
 
@@ -36,10 +37,10 @@ Self-hosted warranty tracker — get email and Slack alerts before your equipmen
 
 ---
 
-## Quickstart
+## Quickstart (build from source)
 
 ```bash
-git clone <repo-url> garantify
+git clone https://github.com/0xNOCARRIER/garantify
 cd garantify
 ./scripts/init.sh
 ```
@@ -56,6 +57,40 @@ Migrations run automatically on startup.
 
 ---
 
+## Deploy with the pre-built image
+
+The fastest way to run Garantify in production is to pull the pre-built image from GitHub Container Registry.
+
+```bash
+mkdir garantify && cd garantify
+curl -O https://raw.githubusercontent.com/0xNOCARRIER/garantify/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/0xNOCARRIER/garantify/main/.env.example
+mv .env.example .env
+# Edit .env to set POSTGRES_PASSWORD, SESSION_SECRET, ENCRYPTION_KEY, SMTP_*
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Updating
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Pinning to a specific version
+
+By default `IMAGE_TAG=latest` follows the `main` branch. For stable deployments, pin to a release:
+
+```bash
+IMAGE_TAG=1 docker compose -f docker-compose.prod.yml up -d    # latest 1.x
+IMAGE_TAG=1.2 docker compose -f docker-compose.prod.yml up -d  # latest 1.2.x
+IMAGE_TAG=1.2.3 docker compose -f docker-compose.prod.yml up -d # exact
+```
+
+Available images: https://github.com/0xNOCARRIER/garantify/pkgs/container/garantify
+
+---
+
 ## Configuration
 
 All configuration is done via environment variables. Copy `.env.example` to `.env` to get started.
@@ -69,8 +104,8 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 | `POSTGRES_PASSWORD` | yes | — | PostgreSQL password |
 | `POSTGRES_DB` | yes | `garantify` | PostgreSQL database name |
 | `DATABASE_URL` | yes | — | Full Postgres connection URL |
-| `SESSION_SECRET` | yes | — | Session signing key (min. 64 chars) — generate with `openssl rand -hex 64` |
-| `ENCRYPTION_KEY` | yes | — | AES-256 key for Slack webhook storage — generate with `openssl rand -base64 32` |
+| `SESSION_SECRET` | yes | — | Session signing key (min. 64 chars) — `openssl rand -hex 64` |
+| `ENCRYPTION_KEY` | yes | — | AES-256 key for Slack webhook storage — `openssl rand -base64 32` |
 | `SMTP_HOST` | no | — | SMTP server hostname |
 | `SMTP_PORT` | no | `587` | SMTP port (465 = implicit SSL, 587 = STARTTLS) |
 | `SMTP_USERNAME` | no | — | SMTP username |
@@ -85,18 +120,18 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 
 ## Local Development
 
-**Prerequisites:** Rust (stable), PostgreSQL 16, [sqlx-cli](https://github.com/launchbain/sqlx/tree/main/sqlx-cli)
+**Prerequisites:** Rust (stable), PostgreSQL 16, [sqlx-cli](https://github.com/launchbadge/sqlx/tree/main/sqlx-cli)
 
 ```bash
 # Install sqlx-cli
 cargo install sqlx-cli --no-default-features --features postgres
 
-# Start a local Postgres instance (adjust to your setup)
+# Start a local Postgres instance
 docker run -d --name pg -e POSTGRES_USER=garantify \
   -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=garantify \
   -p 5432:5432 postgres:16-alpine
 
-# Copy and edit the environment file
+# Configure environment
 cp .env.example .env
 # Set DATABASE_URL=postgres://garantify:dev@localhost:5432/garantify
 
@@ -108,6 +143,12 @@ cargo run
 ```
 
 The app will be available at `http://localhost:8080`.
+
+For the Docker-based dev workflow (with hot-rebuild), use `docker-compose.yml` (not `docker-compose.prod.yml`):
+
+```bash
+docker compose up --build
+```
 
 ---
 
@@ -145,7 +186,8 @@ Notifications: tokio-cron-scheduler → jobs/mod.rs → services/email.rs + serv
 - [x] Slack notifications via Incoming Webhooks
 - [x] Per-user notification settings
 - [x] Dark mode
-- [ ] GitHub Actions CI (build + test)
+- [x] GitHub Actions CI (build + test)
+- [x] Multi-arch Docker image (amd64 + arm64) published to GHCR
 - [ ] Mobile-friendly UI improvements
 - [ ] Multi-language support (i18n)
 - [ ] Public API
