@@ -40,7 +40,10 @@ pub async fn check_csrf(session: &Session, form_token: &str) -> Result<bool, App
 // -- Register --
 
 pub async fn register_page(session: Session) -> Result<impl IntoResponse, AppError> {
-    Ok(RegisterTemplate { csrf_token: new_csrf(&session).await?, error: None })
+    Ok(RegisterTemplate {
+        csrf_token: new_csrf(&session).await?,
+        error: None,
+    })
 }
 
 #[derive(Deserialize)]
@@ -66,8 +69,11 @@ pub async fn register(
     let email = form.email.trim().to_lowercase();
 
     if !email.contains('@') {
-        return Ok(RegisterTemplate { csrf_token, error: Some("Email invalide.".into()) }
-            .into_response());
+        return Ok(RegisterTemplate {
+            csrf_token,
+            error: Some("Email invalide.".into()),
+        }
+        .into_response());
     }
     if form.password.len() < 8 {
         return Ok(RegisterTemplate {
@@ -104,7 +110,10 @@ pub async fn register(
     match result {
         Ok(_) => {
             // Auto-login après inscription
-            let creds = Credentials { email: email.clone(), password: form.password };
+            let creds = Credentials {
+                email: email.clone(),
+                password: form.password,
+            };
             if let Ok(Some(user)) = auth.authenticate(creds).await {
                 let _ = auth.login(&user).await;
             }
@@ -122,7 +131,10 @@ pub async fn register(
 // -- Login --
 
 pub async fn login_page(session: Session) -> Result<impl IntoResponse, AppError> {
-    Ok(LoginTemplate { csrf_token: new_csrf(&session).await?, error: None })
+    Ok(LoginTemplate {
+        csrf_token: new_csrf(&session).await?,
+        error: None,
+    })
 }
 
 #[derive(Deserialize)]
@@ -177,7 +189,9 @@ pub async fn login(
 // -- Logout --
 
 pub async fn logout(mut auth: AuthSession<AuthBackend>) -> Result<impl IntoResponse, AppError> {
-    auth.logout().await.map_err(|e| AppError::Auth(e.to_string()))?;
+    auth.logout()
+        .await
+        .map_err(|e| AppError::Auth(e.to_string()))?;
     Ok(Redirect::to("/login"))
 }
 
@@ -235,7 +249,10 @@ pub async fn forgot(
         .await?;
 
         if let Err(e) = send_reset_email(&config, &email, &token).await {
-            let base_url = config.app_base_url.as_deref().unwrap_or("http://localhost:8080");
+            let base_url = config
+                .app_base_url
+                .as_deref()
+                .unwrap_or("http://localhost:8080");
             error!("Erreur envoi email reset : {}", e);
             warn!(
                 "FALLBACK reset link pour {} : {}/password/reset?token={}",
@@ -246,7 +263,12 @@ pub async fn forgot(
 
     // Toujours la même réponse : ne pas révéler si l'email existe
     let csrf_token = new_csrf(&session).await?;
-    Ok(ForgotPasswordTemplate { csrf_token, success: true, error: None }.into_response())
+    Ok(ForgotPasswordTemplate {
+        csrf_token,
+        success: true,
+        error: None,
+    }
+    .into_response())
 }
 
 // -- Reset password --
@@ -272,13 +294,12 @@ pub async fn reset_page(
         .into_response());
     };
 
-    let valid = sqlx::query(
-        "SELECT 1 FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()",
-    )
-    .bind(&token)
-    .fetch_optional(&pool)
-    .await?
-    .is_some();
+    let valid =
+        sqlx::query("SELECT 1 FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW()")
+            .bind(&token)
+            .fetch_optional(&pool)
+            .await?
+            .is_some();
 
     if !valid {
         return Ok(ResetPasswordTemplate {
@@ -289,7 +310,12 @@ pub async fn reset_page(
         .into_response());
     }
 
-    Ok(ResetPasswordTemplate { csrf_token, token, error: None }.into_response())
+    Ok(ResetPasswordTemplate {
+        csrf_token,
+        token,
+        error: None,
+    }
+    .into_response())
 }
 
 #[derive(Deserialize)]

@@ -30,32 +30,38 @@ impl Equipment {
     /// "valid" | "expiring" | "expired" — utilisé comme data-status pour Alpine.js
     pub fn status_label(&self) -> &'static str {
         let d = self.days_left();
-        if d < 0 { "expired" } else if d <= 30 { "expiring" } else { "valid" }
+        if d < 0 {
+            "expired"
+        } else if d <= 30 {
+            "expiring"
+        } else {
+            "valid"
+        }
     }
 
     pub fn badge_class(&self) -> &'static str {
         match self.status_label() {
-            "expired"  => "g-badge g-badge-danger",
+            "expired" => "g-badge g-badge-danger",
             "expiring" => "g-badge g-badge-warning",
-            _          => "g-badge g-badge-ok",
+            _ => "g-badge g-badge-ok",
         }
     }
 
     pub fn status_text(&self) -> String {
         let d = self.days_left();
         match d {
-            d if d < 0  => format!("Expiré il y a {} j.", -d),
-            0            => "Expire aujourd'hui".into(),
-            d            => format!("{} j. restants", d),
+            d if d < 0 => format!("Expiré il y a {} j.", -d),
+            0 => "Expire aujourd'hui".into(),
+            d => format!("{} j. restants", d),
         }
     }
 
     pub fn category_label(&self) -> &'static str {
         match self.category.as_str() {
             "electromenager" => "Électroménager",
-            "informatique"   => "Informatique",
-            "multimedia"     => "Multimédia",
-            _                => "Autre",
+            "informatique" => "Informatique",
+            "multimedia" => "Multimédia",
+            _ => "Autre",
         }
     }
 }
@@ -84,10 +90,7 @@ mod tests {
 
     #[test]
     fn warranty_end_24_months() {
-        assert_eq!(
-            compute_warranty_end(date(2023, 6, 1), 24),
-            date(2025, 6, 1)
-        );
+        assert_eq!(compute_warranty_end(date(2023, 6, 1), 24), date(2025, 6, 1));
     }
 
     #[test]

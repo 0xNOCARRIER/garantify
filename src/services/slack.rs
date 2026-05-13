@@ -55,7 +55,9 @@ mod tests {
     #[test]
     fn invalid_webhook_urls() {
         assert!(!validate_webhook_url("https://example.com/webhook"));
-        assert!(!validate_webhook_url("http://hooks.slack.com/services/T/B/X"));
+        assert!(!validate_webhook_url(
+            "http://hooks.slack.com/services/T/B/X"
+        ));
         assert!(!validate_webhook_url(""));
         assert!(!validate_webhook_url("hooks.slack.com/services/T/B/X"));
     }

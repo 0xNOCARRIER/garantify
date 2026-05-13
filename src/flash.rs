@@ -19,11 +19,17 @@ pub enum FlashLevel {
 
 impl Flash {
     pub fn success(message: impl Into<String>) -> Self {
-        Self { level: FlashLevel::Success, message: message.into() }
+        Self {
+            level: FlashLevel::Success,
+            message: message.into(),
+        }
     }
 
     pub fn error(message: impl Into<String>) -> Self {
-        Self { level: FlashLevel::Error, message: message.into() }
+        Self {
+            level: FlashLevel::Error,
+            message: message.into(),
+        }
     }
 
     pub fn is_success(&self) -> bool {

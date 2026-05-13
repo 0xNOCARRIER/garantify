@@ -117,8 +117,11 @@ pub async fn settings_password(
     }
 
     if form.new_password != form.new_password_confirm {
-        set_flash(&session, Flash::error("Les nouveaux mots de passe ne correspondent pas."))
-            .await?;
+        set_flash(
+            &session,
+            Flash::error("Les nouveaux mots de passe ne correspondent pas."),
+        )
+        .await?;
         return Ok(Redirect::to("/settings").into_response());
     }
 
@@ -143,7 +146,9 @@ pub async fn settings_password(
 
     // La session sera invalidée automatiquement par axum-login (session_auth_hash),
     // mais on force le logout immédiatement pour la clarté UX.
-    auth.logout().await.map_err(|e| AppError::Auth(e.to_string()))?;
+    auth.logout()
+        .await
+        .map_err(|e| AppError::Auth(e.to_string()))?;
 
     Ok(Redirect::to("/login?changed=1").into_response())
 }
@@ -176,7 +181,11 @@ pub async fn settings_email(
         if trimmed.is_empty() {
             None
         } else if !trimmed.contains('@') {
-            set_flash(&session, Flash::error("Adresse email de notification invalide.")).await?;
+            set_flash(
+                &session,
+                Flash::error("Adresse email de notification invalide."),
+            )
+            .await?;
             return Ok(Redirect::to("/settings").into_response());
         } else {
             Some(trimmed.to_lowercase())
@@ -226,7 +235,13 @@ pub async fn settings_email_test(
     let to = user.notification_email.as_deref().unwrap_or(&user.email);
 
     match send_email_test(&config, to).await {
-        Ok(_) => set_flash(&session, Flash::success(format!("Email de test envoyé à {to}."))).await?,
+        Ok(_) => {
+            set_flash(
+                &session,
+                Flash::success(format!("Email de test envoyé à {to}.")),
+            )
+            .await?
+        }
         Err(e) => {
             error!("Erreur email de test : {}", e);
             set_flash(&session, Flash::error(format!("Échec de l'envoi : {e}"))).await?;
@@ -269,7 +284,9 @@ pub async fn settings_slack(
         } else if !validate_webhook_url(trimmed) {
             set_flash(
                 &session,
-                Flash::error("URL invalide. Elle doit commencer par https://hooks.slack.com/services/"),
+                Flash::error(
+                    "URL invalide. Elle doit commencer par https://hooks.slack.com/services/",
+                ),
             )
             .await?;
             return Ok(Redirect::to("/settings").into_response());
@@ -278,7 +295,11 @@ pub async fn settings_slack(
                 Ok(enc) => Some(enc),
                 Err(e) => {
                     error!("Erreur chiffrement webhook : {}", e);
-                    set_flash(&session, Flash::error("Erreur interne lors du chiffrement.")).await?;
+                    set_flash(
+                        &session,
+                        Flash::error("Erreur interne lors du chiffrement."),
+                    )
+                    .await?;
                     return Ok(Redirect::to("/settings").into_response());
                 }
             }
@@ -332,13 +353,24 @@ pub async fn settings_slack_test(
         Ok(url) => url,
         Err(e) => {
             error!("Erreur déchiffrement webhook : {}", e);
-            set_flash(&session, Flash::error("Impossible de lire le webhook — clé de chiffrement incorrecte ?")).await?;
+            set_flash(
+                &session,
+                Flash::error("Impossible de lire le webhook — clé de chiffrement incorrecte ?"),
+            )
+            .await?;
             return Ok(Redirect::to("/settings").into_response());
         }
     };
 
-    match send_slack_message(&webhook_url, "✅ *Garantify* — test de connexion réussi !").await {
-        Ok(_) => set_flash(&session, Flash::success("Message de test envoyé sur Slack !")).await?,
+    match send_slack_message(&webhook_url, "✅ *Garantify* — test de connexion réussi !").await
+    {
+        Ok(_) => {
+            set_flash(
+                &session,
+                Flash::success("Message de test envoyé sur Slack !"),
+            )
+            .await?
+        }
         Err(e) => {
             error!("Erreur test Slack : {}", e);
             set_flash(&session, Flash::error(format!("Échec : {e}"))).await?;

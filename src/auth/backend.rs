@@ -63,7 +63,9 @@ impl AuthnBackend for AuthBackend {
         let valid = tokio::task::spawn_blocking(move || {
             use argon2::{Argon2, PasswordHash, PasswordVerifier};
             PasswordHash::new(&hash)
-                .and_then(|parsed| Argon2::default().verify_password(creds.password.as_bytes(), &parsed))
+                .and_then(|parsed| {
+                    Argon2::default().verify_password(creds.password.as_bytes(), &parsed)
+                })
                 .is_ok()
         })
         .await

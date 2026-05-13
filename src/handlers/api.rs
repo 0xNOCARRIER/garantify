@@ -12,8 +12,14 @@ pub struct ScrapeRequest {
 #[derive(Serialize)]
 #[serde(untagged)]
 pub enum ScrapeResponse {
-    Ok { name: Option<String>, description: Option<String>, image_url: Option<String> },
-    Err { error: String },
+    Ok {
+        name: Option<String>,
+        description: Option<String>,
+        image_url: Option<String>,
+    },
+    Err {
+        error: String,
+    },
 }
 
 /// POST /api/scrape-product
@@ -28,6 +34,8 @@ pub async fn scrape_product_handler(
             description: r.description,
             image_url: r.image_url,
         }),
-        Err(e) => Json(ScrapeResponse::Err { error: e.to_string() }),
+        Err(e) => Json(ScrapeResponse::Err {
+            error: e.to_string(),
+        }),
     }
 }

@@ -28,12 +28,11 @@ pub struct EquipmentSummary {
     pub warranty_end_date: chrono::NaiveDate,
 }
 
-pub async fn send_reset_email(
-    config: &Config,
-    to: &str,
-    token: &str,
-) -> Result<(), EmailError> {
-    let base_url = config.app_base_url.as_deref().unwrap_or("http://localhost:8080");
+pub async fn send_reset_email(config: &Config, to: &str, token: &str) -> Result<(), EmailError> {
+    let base_url = config
+        .app_base_url
+        .as_deref()
+        .unwrap_or("http://localhost:8080");
     let reset_url = format!("{}/password/reset?token={}", base_url, token);
     let html = format!(
         "<p>Bonjour,</p>\
@@ -43,7 +42,13 @@ pub async fn send_reset_email(
         <p>Si vous n'avez pas fait cette demande, ignorez cet email.</p>",
         url = reset_url
     );
-    send_email(config, to, "Réinitialisation de votre mot de passe — Garantify", html).await?;
+    send_email(
+        config,
+        to,
+        "Réinitialisation de votre mot de passe — Garantify",
+        html,
+    )
+    .await?;
     info!("Email de réinitialisation envoyé à {}", to);
     Ok(())
 }
@@ -65,14 +70,23 @@ pub async fn send_alert_email(
     equipment: &EquipmentSummary,
     days_left: i64,
 ) -> Result<(), EmailError> {
-    let base_url = config.app_base_url.as_deref().unwrap_or("http://localhost:8080");
+    let base_url = config
+        .app_base_url
+        .as_deref()
+        .unwrap_or("http://localhost:8080");
     let (subject, urgency) = match days_left {
         30 => (
-            format!("Rappel : garantie de « {} » expire dans 30 jours", equipment.name),
+            format!(
+                "Rappel : garantie de « {} » expire dans 30 jours",
+                equipment.name
+            ),
             "expire dans <strong>30 jours</strong>",
         ),
         7 => (
-            format!("Urgent : garantie de « {} » expire dans 7 jours", equipment.name),
+            format!(
+                "Urgent : garantie de « {} » expire dans 7 jours",
+                equipment.name
+            ),
             "expire dans <strong>7 jours</strong>",
         ),
         _ => (
@@ -105,15 +119,22 @@ pub async fn send_monthly_report_email(
     expiring_soon: &[EquipmentSummary],
     recently_expired: &[EquipmentSummary],
 ) -> Result<(), EmailError> {
-    let base_url = config.app_base_url.as_deref().unwrap_or("http://localhost:8080");
-    let mut html = String::from("<p>Bonjour,</p><p>Voici votre récapitulatif mensuel Garantify.</p>");
+    let base_url = config
+        .app_base_url
+        .as_deref()
+        .unwrap_or("http://localhost:8080");
+    let mut html =
+        String::from("<p>Bonjour,</p><p>Voici votre récapitulatif mensuel Garantify.</p>");
 
     if !expiring_soon.is_empty() {
         html.push_str("<h3 style=\"color:#b45309\">Expirent dans les 30 prochains jours</h3><ul>");
         for eq in expiring_soon {
             html.push_str(&format!(
                 "<li><a href=\"{base}/{id}\">{name}</a> — {date}</li>",
-                base = base_url, id = eq.id, name = eq.name, date = eq.warranty_end_date,
+                base = base_url,
+                id = eq.id,
+                name = eq.name,
+                date = eq.warranty_end_date,
             ));
         }
         html.push_str("</ul>");
@@ -124,7 +145,10 @@ pub async fn send_monthly_report_email(
         for eq in recently_expired {
             html.push_str(&format!(
                 "<li><a href=\"{base}/{id}\">{name}</a> — {date}</li>",
-                base = base_url, id = eq.id, name = eq.name, date = eq.warranty_end_date,
+                base = base_url,
+                id = eq.id,
+                name = eq.name,
+                date = eq.warranty_end_date,
             ));
         }
         html.push_str("</ul>");

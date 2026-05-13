@@ -130,9 +130,9 @@ async fn run_daily_alerts(pool: &PgPool, config: &Config) -> Result<(), JobError
         let days_left = (row.warranty_end_date - today).num_days();
         let kind = match days_left {
             30 => "alert_30d",
-            7  => "alert_7d",
-            0  => "alert_expired",
-            _  => continue,
+            7 => "alert_7d",
+            0 => "alert_expired",
+            _ => continue,
         };
 
         let eq = EquipmentSummary {
@@ -188,8 +188,8 @@ async fn run_daily_alerts(pool: &PgPool, config: &Config) -> Result<(), JobError
                         Ok(url) => {
                             let emoji = match days_left {
                                 30 => "📅",
-                                7  => "⚠️",
-                                _  => "❌",
+                                7 => "⚠️",
+                                _ => "❌",
                             };
                             let text = format!(
                                 "{emoji} *Garantify* — garantie de *{}* expire dans *{} j.* ({})",
@@ -268,11 +268,15 @@ async fn run_monthly_report(pool: &PgPool, config: &Config) -> Result<(), JobErr
 
         let to_summaries = |rows: Vec<EquipmentRow>| -> Vec<EquipmentSummary> {
             rows.into_iter()
-                .map(|r| EquipmentSummary { id: r.id, name: r.name, warranty_end_date: r.warranty_end_date })
+                .map(|r| EquipmentSummary {
+                    id: r.id,
+                    name: r.name,
+                    warranty_end_date: r.warranty_end_date,
+                })
                 .collect()
         };
         let expiring_s = to_summaries(expiring);
-        let expired_s  = to_summaries(recently_expired);
+        let expired_s = to_summaries(recently_expired);
 
         // ── Canal email ──────────────────────────────────────────────
         if user.notifications_email_enabled && smtp_configured(config) {
@@ -325,13 +329,19 @@ async fn run_monthly_report(pool: &PgPool, config: &Config) -> Result<(), JobErr
                             if !expiring_s.is_empty() {
                                 text.push_str("\n⚠️ *Expirent dans les 30 jours :*\n");
                                 for eq in &expiring_s {
-                                    text.push_str(&format!("• {} — {}\n", eq.name, eq.warranty_end_date));
+                                    text.push_str(&format!(
+                                        "• {} — {}\n",
+                                        eq.name, eq.warranty_end_date
+                                    ));
                                 }
                             }
                             if !expired_s.is_empty() {
                                 text.push_str("\n❌ *Expirées le mois dernier :*\n");
                                 for eq in &expired_s {
-                                    text.push_str(&format!("• {} — {}\n", eq.name, eq.warranty_end_date));
+                                    text.push_str(&format!(
+                                        "• {} — {}\n",
+                                        eq.name, eq.warranty_end_date
+                                    ));
                                 }
                             }
                             match send_slack_message(&url, &text).await {

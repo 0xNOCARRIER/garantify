@@ -5,20 +5,13 @@
 ///
 /// Lancer avec :
 ///   DATABASE_URL_TEST=postgres://... ENCRYPTION_KEY=$(openssl rand -base64 32) cargo test --test settings_password
-use std::env;
-
-fn encryption_key() -> Option<[u8; 32]> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
-    let raw = env::var("ENCRYPTION_KEY").ok()?;
-    let bytes = STANDARD.decode(raw.trim()).ok()?;
-    bytes.try_into().ok()
-}
-
 #[tokio::test]
 async fn password_change_wrong_current_password() {
     // Test unitaire de la logique de validation (sans HTTP)
     use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+        password_hash::{
+            rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+        },
         Argon2,
     };
 

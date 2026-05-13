@@ -5,10 +5,10 @@ use axum::{
 };
 use axum_login::AuthSession;
 use chrono::NaiveDate;
+use sqlx::PgPool;
 use tower_sessions::Session;
 use tracing::error;
 use uuid::Uuid;
-use sqlx::PgPool;
 
 use crate::{
     auth::backend::AuthBackend,
@@ -19,7 +19,10 @@ use crate::{
         scrape::download_og_image,
         upload::{delete_equipment_files, save_image, save_pdf},
     },
-    templates::{DashboardTemplate, DetailEquipmentTemplate, EditEquipmentTemplate, NewEquipmentTemplate, NotFoundTemplate},
+    templates::{
+        DashboardTemplate, DetailEquipmentTemplate, EditEquipmentTemplate, NewEquipmentTemplate,
+        NotFoundTemplate,
+    },
 };
 
 use super::auth::{check_csrf, new_csrf};
@@ -40,10 +43,22 @@ pub async fn dashboard(
     .await?;
 
     let total = equipments.len();
-    let expiring_count = equipments.iter().filter(|e| e.status_label() == "expiring").count();
-    let expired_count  = equipments.iter().filter(|e| e.status_label() == "expired").count();
+    let expiring_count = equipments
+        .iter()
+        .filter(|e| e.status_label() == "expiring")
+        .count();
+    let expired_count = equipments
+        .iter()
+        .filter(|e| e.status_label() == "expired")
+        .count();
 
-    Ok(DashboardTemplate { user_email: user.email, equipments, total, expiring_count, expired_count })
+    Ok(DashboardTemplate {
+        user_email: user.email,
+        equipments,
+        total,
+        expiring_count,
+        expired_count,
+    })
 }
 
 // -- Nouveau équipement GET --
@@ -93,20 +108,32 @@ pub async fn new_equipment_post(
                 purchase_date: form.purchase_date_str.clone(),
                 warranty_months: form.warranty_months_str.clone(),
                 max_upload_mb: config.max_upload_mb,
-            }.into_response())
+            }
+            .into_response())
         };
     }
 
-    if form.name.trim().is_empty()     { form_err!("Le nom est obligatoire."); }
-    if form.category.is_empty()        { form_err!("La catégorie est obligatoire."); }
-    if form.purchase_date_str.is_empty() { form_err!("La date d'achat est obligatoire."); }
+    if form.name.trim().is_empty() {
+        form_err!("Le nom est obligatoire.");
+    }
+    if form.category.is_empty() {
+        form_err!("La catégorie est obligatoire.");
+    }
+    if form.purchase_date_str.is_empty() {
+        form_err!("La date d'achat est obligatoire.");
+    }
 
     let purchase_date = NaiveDate::parse_from_str(&form.purchase_date_str, "%Y-%m-%d")
-        .map_err(|_| ()).unwrap_or_default();
-    if purchase_date == NaiveDate::default() { form_err!("Date d'achat invalide."); }
+        .map_err(|_| ())
+        .unwrap_or_default();
+    if purchase_date == NaiveDate::default() {
+        form_err!("Date d'achat invalide.");
+    }
 
     let warranty_months: i32 = form.warranty_months_str.parse().unwrap_or(0);
-    if warranty_months < 1 { form_err!("La durée de garantie doit être ≥ 1 mois."); }
+    if warranty_months < 1 {
+        form_err!("La durée de garantie doit être ≥ 1 mois.");
+    }
 
     let warranty_end_date = compute_warranty_end(purchase_date, warranty_months);
     let equipment_id = Uuid::new_v4();
@@ -124,9 +151,14 @@ pub async fn new_equipment_post(
         // Télécharge l'image OG côté serveur (non-fatal si ça échoue)
         match download_og_image(og_url, &config.upload_dir, user.id, equipment_id).await {
             Ok(p) => Some(p),
-            Err(e) => { error!("Download OG image: {}", e); None }
+            Err(e) => {
+                error!("Download OG image: {}", e);
+                None
+            }
         }
-    } else { None };
+    } else {
+        None
+    };
 
     // Upload facture
     let invoice_path = if let Some((data, ct)) = form.invoice {
@@ -137,7 +169,9 @@ pub async fn new_equipment_post(
                 form_err!(format!("Facture invalide : {}", e));
             }
         }
-    } else { None };
+    } else {
+        None
+    };
 
     let product_url = form.product_url.filter(|u| !u.trim().is_empty());
 
@@ -150,7 +184,14 @@ pub async fn new_equipment_post(
     .bind(equipment_id)
     .bind(user.id)
     .bind(form.name.trim())
-    .bind(form.description.trim().is_empty().then_some(None::<String>).unwrap_or(Some(form.description.trim().to_string())))
+    .bind({
+        let trimmed = form.description.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
     .bind(&form.category)
     .bind(&form.purchase_type)
     .bind(&product_url)
@@ -174,17 +215,22 @@ pub async fn detail_equipment(
 ) -> Result<impl IntoResponse, AppError> {
     let user = auth.user.expect("login_required garantit un user");
 
-    let eq = sqlx::query_as::<_, Equipment>(
-        "SELECT * FROM equipments WHERE id = $1 AND user_id = $2",
-    )
-    .bind(id)
-    .bind(user.id)
-    .fetch_optional(&pool)
-    .await?;
+    let eq =
+        sqlx::query_as::<_, Equipment>("SELECT * FROM equipments WHERE id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&pool)
+            .await?;
 
     match eq {
         Some(eq) => Ok(DetailEquipmentTemplate { eq }.into_response()),
-        None => Ok((StatusCode::NOT_FOUND, NotFoundTemplate { message: "Cet équipement n'existe pas ou ne vous appartient pas." }).into_response()),
+        None => Ok((
+            StatusCode::NOT_FOUND,
+            NotFoundTemplate {
+                message: "Cet équipement n'existe pas ou ne vous appartient pas.",
+            },
+        )
+            .into_response()),
     }
 }
 
@@ -199,13 +245,12 @@ pub async fn edit_equipment_page(
 ) -> Result<impl IntoResponse, AppError> {
     let user = auth.user.expect("login_required garantit un user");
 
-    let eq = sqlx::query_as::<_, Equipment>(
-        "SELECT * FROM equipments WHERE id = $1 AND user_id = $2",
-    )
-    .bind(id)
-    .bind(user.id)
-    .fetch_optional(&pool)
-    .await?;
+    let eq =
+        sqlx::query_as::<_, Equipment>("SELECT * FROM equipments WHERE id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&pool)
+            .await?;
 
     match eq {
         Some(eq) => Ok(EditEquipmentTemplate {
@@ -215,7 +260,13 @@ pub async fn edit_equipment_page(
             max_upload_mb: config.max_upload_mb,
         }
         .into_response()),
-        None => Ok((StatusCode::NOT_FOUND, NotFoundTemplate { message: "Cet équipement n'existe pas ou ne vous appartient pas." }).into_response()),
+        None => Ok((
+            StatusCode::NOT_FOUND,
+            NotFoundTemplate {
+                message: "Cet équipement n'existe pas ou ne vous appartient pas.",
+            },
+        )
+            .into_response()),
     }
 }
 
@@ -231,13 +282,12 @@ pub async fn edit_equipment_post(
 ) -> Result<impl IntoResponse, AppError> {
     let user = auth.user.expect("login_required garantit un user");
 
-    let existing = sqlx::query_as::<_, Equipment>(
-        "SELECT * FROM equipments WHERE id = $1 AND user_id = $2",
-    )
-    .bind(id)
-    .bind(user.id)
-    .fetch_optional(&pool)
-    .await?;
+    let existing =
+        sqlx::query_as::<_, Equipment>("SELECT * FROM equipments WHERE id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&pool)
+            .await?;
 
     let Some(existing) = existing else {
         return Ok(Redirect::to("/").into_response());
@@ -258,16 +308,24 @@ pub async fn edit_equipment_post(
                 eq: eq_clone.clone(),
                 error: Some($msg.into()),
                 max_upload_mb: config.max_upload_mb,
-            }.into_response())
+            }
+            .into_response())
         };
     }
 
-    if form.name.trim().is_empty() { edit_err!("Le nom est obligatoire."); }
+    if form.name.trim().is_empty() {
+        edit_err!("Le nom est obligatoire.");
+    }
 
     let purchase_date = NaiveDate::parse_from_str(&form.purchase_date_str, "%Y-%m-%d")
         .unwrap_or(existing.purchase_date);
-    let warranty_months: i32 = form.warranty_months_str.parse().unwrap_or(existing.warranty_months);
-    if warranty_months < 1 { edit_err!("La durée de garantie doit être ≥ 1 mois."); }
+    let warranty_months: i32 = form
+        .warranty_months_str
+        .parse()
+        .unwrap_or(existing.warranty_months);
+    if warranty_months < 1 {
+        edit_err!("La durée de garantie doit être ≥ 1 mois.");
+    }
 
     let warranty_end_date = compute_warranty_end(purchase_date, warranty_months);
     let product_url = form.product_url.filter(|u| !u.trim().is_empty());
@@ -276,18 +334,33 @@ pub async fn edit_equipment_post(
     let image_path = if let Some((data, ct)) = form.image {
         match save_image(data, &ct, &config.upload_dir, user.id, id).await {
             Ok(p) => Some(p),
-            Err(e) => { edit_err!(format!("Image invalide : {}", e)); }
+            Err(e) => {
+                edit_err!(format!("Image invalide : {}", e));
+            }
         }
-    } else { existing.image_path.clone() };
+    } else {
+        existing.image_path.clone()
+    };
 
     let invoice_path = if let Some((data, ct)) = form.invoice {
         match save_pdf(data, &ct, &config.upload_dir, user.id, id).await {
             Ok(p) => Some(p),
-            Err(e) => { edit_err!(format!("Facture invalide : {}", e)); }
+            Err(e) => {
+                edit_err!(format!("Facture invalide : {}", e));
+            }
         }
-    } else { existing.invoice_path.clone() };
+    } else {
+        existing.invoice_path.clone()
+    };
 
-    let description = form.description.trim().is_empty().then_some(None).unwrap_or(Some(form.description.trim().to_string()));
+    let description = {
+        let trimmed = form.description.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    };
 
     sqlx::query(
         "UPDATE equipments SET
@@ -378,20 +451,23 @@ async fn parse_multipart(
     {
         let name = field.name().unwrap_or("").to_string();
         let ct = field.content_type().unwrap_or("text/plain").to_string();
-        let _is_file = !ct.starts_with("text/") && ct != "application/octet-stream" || ct == "application/pdf";
+        let _is_file =
+            !ct.starts_with("text/") && ct != "application/octet-stream" || ct == "application/pdf";
 
         match name.as_str() {
-            "csrf_token"      => form.csrf_token = field.text().await.unwrap_or_default(),
-            "name"            => form.name = field.text().await.unwrap_or_default(),
-            "description"     => form.description = field.text().await.unwrap_or_default(),
-            "category"        => form.category = field.text().await.unwrap_or_default(),
-            "purchase_type"   => form.purchase_type = field.text().await.unwrap_or_default(),
-            "product_url"        => form.product_url = Some(field.text().await.unwrap_or_default()),
-            "scraped_image_url"  => {
+            "csrf_token" => form.csrf_token = field.text().await.unwrap_or_default(),
+            "name" => form.name = field.text().await.unwrap_or_default(),
+            "description" => form.description = field.text().await.unwrap_or_default(),
+            "category" => form.category = field.text().await.unwrap_or_default(),
+            "purchase_type" => form.purchase_type = field.text().await.unwrap_or_default(),
+            "product_url" => form.product_url = Some(field.text().await.unwrap_or_default()),
+            "scraped_image_url" => {
                 let v = field.text().await.unwrap_or_default();
-                if !v.is_empty() { form.scraped_image_url = Some(v); }
+                if !v.is_empty() {
+                    form.scraped_image_url = Some(v);
+                }
             }
-            "purchase_date"   => form.purchase_date_str = field.text().await.unwrap_or_default(),
+            "purchase_date" => form.purchase_date_str = field.text().await.unwrap_or_default(),
             "warranty_months" => form.warranty_months_str = field.text().await.unwrap_or_default(),
             "image" => {
                 let data: Vec<u8> = field.bytes().await.unwrap_or_default().to_vec();
@@ -405,7 +481,9 @@ async fn parse_multipart(
                     form.invoice = Some((data, ct));
                 }
             }
-            _ => { let _ = field.bytes().await; }
+            _ => {
+                let _ = field.bytes().await;
+            }
         }
     }
 

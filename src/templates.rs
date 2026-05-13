@@ -1,6 +1,6 @@
-use askama::Template;
 use crate::flash::Flash;
 use crate::models::equipment::Equipment;
+use askama::Template;
 
 // -- Auth --
 

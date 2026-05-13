@@ -37,10 +37,16 @@ const USER_AGENT: &str =
 
 fn browser_headers() -> HeaderMap {
     let mut h = HeaderMap::new();
-    h.insert(header::ACCEPT, HeaderValue::from_static(
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    ));
-    h.insert(header::ACCEPT_LANGUAGE, HeaderValue::from_static("fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7"));
+    h.insert(
+        header::ACCEPT,
+        HeaderValue::from_static(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        ),
+    );
+    h.insert(
+        header::ACCEPT_LANGUAGE,
+        HeaderValue::from_static("fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7"),
+    );
     h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
     h.insert("DNT", HeaderValue::from_static("1"));
     h
@@ -83,7 +89,11 @@ pub async fn scrape_product(url: &str) -> Result<ScrapeResult, ScrapeError> {
         return Err(ScrapeError::NoData);
     }
 
-    Ok(ScrapeResult { name, description, image_url })
+    Ok(ScrapeResult {
+        name,
+        description,
+        image_url,
+    })
 }
 
 /// Télécharge l'image OG et la stocke dans UPLOAD_DIR.
@@ -130,10 +140,7 @@ async fn check_ssrf(host: &str) -> Result<(), ScrapeError> {
 
     // Refuser les noms d'hôtes manifestement locaux
     let h = host.to_lowercase();
-    if h == "localhost"
-        || h.ends_with(".local")
-        || h.ends_with(".internal")
-        || h.ends_with(".lan")
+    if h == "localhost" || h.ends_with(".local") || h.ends_with(".internal") || h.ends_with(".lan")
     {
         return Err(ScrapeError::BlockedUrl);
     }
@@ -163,7 +170,7 @@ fn is_private(ip: &IpAddr) -> bool {
                 | (169, 254)      // 169.254.0.0/16 link-local
                 | (0, _)          // 0.0.0.0/8
                 | (100, 64..=127) // 100.64.0.0/10 CGNAT
-                | (198, 18..=19)  // 198.18.0.0/15 benchmarking
+                | (198, 18..=19) // 198.18.0.0/15 benchmarking
             )
         }
         IpAddr::V6(v6) => v6.is_loopback() || v6.is_unspecified(),
@@ -185,7 +192,11 @@ pub(crate) fn page_title(doc: &Html) -> Option<String> {
     let sel = Selector::parse("title").ok()?;
     let text = doc.select(&sel).next()?.text().collect::<String>();
     let t = text.trim().to_string();
-    if t.is_empty() { None } else { Some(t) }
+    if t.is_empty() {
+        None
+    } else {
+        Some(t)
+    }
 }
 
 pub(crate) fn meta_desc(doc: &Html) -> Option<String> {
@@ -207,40 +218,52 @@ mod tests {
 
     #[test]
     fn lit_balises_og() {
-        let doc = parse(r#"<html><head>
+        let doc = parse(
+            r#"<html><head>
             <meta property="og:title" content="Super Produit" />
             <meta property="og:description" content="Une belle description." />
             <meta property="og:image" content="https://example.com/img.jpg" />
-        </head></html>"#);
-        assert_eq!(og(&doc, "og:title"),       Some("Super Produit".into()));
-        assert_eq!(og(&doc, "og:description"), Some("Une belle description.".into()));
-        assert_eq!(og(&doc, "og:image"),       Some("https://example.com/img.jpg".into()));
+        </head></html>"#,
+        );
+        assert_eq!(og(&doc, "og:title"), Some("Super Produit".into()));
+        assert_eq!(
+            og(&doc, "og:description"),
+            Some("Une belle description.".into())
+        );
+        assert_eq!(
+            og(&doc, "og:image"),
+            Some("https://example.com/img.jpg".into())
+        );
     }
 
     #[test]
     fn retourne_none_si_balise_absente() {
         let doc = parse("<html><head></head></html>");
         assert_eq!(og(&doc, "og:title"), None);
-        assert_eq!(page_title(&doc),     None);
-        assert_eq!(meta_desc(&doc),      None);
+        assert_eq!(page_title(&doc), None);
+        assert_eq!(meta_desc(&doc), None);
     }
 
     #[test]
     fn fallback_sur_title_et_meta_description() {
-        let doc = parse(r#"<html><head>
+        let doc = parse(
+            r#"<html><head>
             <title>Titre de la page</title>
             <meta name="description" content="Description classique." />
-        </head></html>"#);
+        </head></html>"#,
+        );
         assert_eq!(page_title(&doc), Some("Titre de la page".into()));
-        assert_eq!(meta_desc(&doc),  Some("Description classique.".into()));
+        assert_eq!(meta_desc(&doc), Some("Description classique.".into()));
         assert_eq!(og(&doc, "og:title"), None);
     }
 
     #[test]
     fn ignore_balise_og_vide() {
-        let doc = parse(r#"<html><head>
+        let doc = parse(
+            r#"<html><head>
             <meta property="og:title" content="  " />
-        </head></html>"#);
+        </head></html>"#,
+        );
         assert_eq!(og(&doc, "og:title"), None);
     }
 }
