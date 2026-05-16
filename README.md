@@ -37,84 +37,213 @@ Self-hosted warranty tracker — get email and Slack alerts before your equipmen
 
 ---
 
-## Quickstart (build from source)
+## Quick start
 
-```bash
-git clone https://github.com/0xNOCARRIER/garantify
-cd garantify
-./scripts/init.sh
+Garantify runs as a Docker image. You just need a folder with two files.
+
+### 1. Create the compose file
+
+Create a file named `compose.yaml`:
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: garantify
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: garantify
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U garantify"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/0xnocarrier/garantify:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://garantify:${POSTGRES_PASSWORD}@db:5432/garantify
+      APP_PORT: 8080
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    volumes:
+      - ./data/uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
 ```
 
-Edit `.env` to fill in your SMTP credentials and any other settings, then:
+The app always listens on port 8080 inside the container. `HOST_PORT` controls which port is exposed on your machine (default: 8080).
+
+### 2. Create the .env file
+
+```bash
+# Public URL where users reach Garantify (used in email links)
+APP_BASE_URL=http://localhost:8080
+
+# Port exposed on the host (e.g. 32006)
+HOST_PORT=8080
+
+# Postgres password — generated below
+POSTGRES_PASSWORD=
+
+# Secrets — generated below
+SESSION_SECRET=
+ENCRYPTION_KEY=
+
+# Email (optional — leave empty to disable email notifications)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+MAIL_FROM=
+
+# Logging
+RUST_LOG=info
+```
+
+### 3. Generate the secrets
+
+```bash
+sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" .env
+sed -i "s|^SESSION_SECRET=.*|SESSION_SECRET=$(openssl rand -hex 64)|" .env
+sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
+```
+
+> **macOS / BSD:** `sed -i` requires an empty string argument: `sed -i '' "s|...|...|" .env`
+
+### 4. Set upload folder permissions
+
+```bash
+mkdir -p data/uploads
+sudo chown -R 1001:1001 data/uploads
+```
+
+Garantify runs as a non-root user (uid 1001) inside the container for security. Without this, the app cannot write uploaded photos and invoices to disk.
+
+### 5. Launch
 
 ```bash
 docker compose up -d
+docker compose logs -f app   # optional — watch startup
 ```
 
-Open [http://localhost:8080](http://localhost:8080) and create your first account at `/register`.
-
-Migrations run automatically on startup.
+Open `http://localhost:8080` (or your `HOST_PORT`) and create your first account at `/register`. Migrations run automatically on startup.
 
 ---
 
-## Deploy with the pre-built image
+## Updating
 
-The fastest way to run Garantify in production is to pull the pre-built image from GitHub Container Registry.
+```bash
+docker compose pull
+docker compose up -d
+docker image prune -f    # optional — clean up old images
+```
+
+Your data is preserved in `./data/`.
+
+---
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `HOST_PORT` | no | `8080` | Port exposed on the host machine |
+| `APP_BASE_URL` | no | `http://localhost:8080` | Public URL used in email links |
+| `RUST_LOG` | no | `info` | Log level (`info`, `debug`, …) |
+| `POSTGRES_PASSWORD` | **yes** | — | PostgreSQL password |
+| `SESSION_SECRET` | **yes** | — | Session signing key — `openssl rand -hex 64` |
+| `ENCRYPTION_KEY` | **yes** | — | AES-256 key for Slack webhook storage — `openssl rand -base64 32` |
+| `SMTP_HOST` | no | — | SMTP server hostname |
+| `SMTP_PORT` | no | `587` | SMTP port (465 = implicit SSL, 587 = STARTTLS) |
+| `SMTP_USERNAME` | no | — | SMTP username |
+| `SMTP_PASSWORD` | no | — | SMTP password |
+| `MAIL_FROM` | no | — | Sender email address |
+
+> `APP_PORT=8080` is fixed inside the container and set directly in the compose file's `environment` block — do not set it in `.env`.
+>
+> Variables marked **yes** are required. The app will refuse to start without `SESSION_SECRET`, `ENCRYPTION_KEY`, and `POSTGRES_PASSWORD`.
+>
+> Email and Slack notifications are optional. Without SMTP config the scheduler runs silently.
+
+---
+
+## Troubleshooting
+
+**`Permission denied (os error 13)` when uploading a photo or invoice**
+
+The `data/uploads` folder must be writable by uid 1001 (the user the container runs as):
+
+```bash
+sudo chown -R 1001:1001 data/uploads
+docker compose restart app
+```
+
+---
+
+**The app starts but connections are refused (`Connection reset by peer`)**
+
+This usually means `APP_PORT` was set to a non-8080 value in `.env`. The app always listens on 8080 inside the container. Use `HOST_PORT` in `.env` to change the external port, and leave `APP_PORT: 8080` fixed in the compose file.
+
+---
+
+**Container restarts in a loop**
+
+Check the logs:
+
+```bash
+docker compose logs --tail=50 app
+```
+
+Most common causes: missing or empty `SESSION_SECRET`, `ENCRYPTION_KEY`, or `POSTGRES_PASSWORD`; or the database hasn't finished initializing (wait 30 seconds on the very first launch).
+
+---
+
+## Reverse proxy (optional)
+
+If you want HTTPS and a custom domain, put Garantify behind a reverse proxy such as [Caddy](https://caddyserver.com), [Traefik](https://traefik.io), or [Nginx Proxy Manager](https://nginxproxymanager.com). Point the proxy at `http://<host>:<HOST_PORT>` and set `APP_BASE_URL=https://garantify.example.com` in your `.env` so links in notification emails use the correct URL.
+
+---
+
+## Alternative install methods
+
+If you prefer not to manage your own compose file, you can use the one shipped in the repository, or build the image yourself.
+
+### B. Using the bundled compose file
 
 ```bash
 mkdir garantify && cd garantify
 curl -O https://raw.githubusercontent.com/0xNOCARRIER/garantify/main/docker-compose.prod.yml
 curl -O https://raw.githubusercontent.com/0xNOCARRIER/garantify/main/.env.example
 mv .env.example .env
-# Edit .env to set POSTGRES_PASSWORD, SESSION_SECRET, ENCRYPTION_KEY, SMTP_*
+# Edit .env — set POSTGRES_PASSWORD, SESSION_SECRET, ENCRYPTION_KEY, SMTP_*
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Updating
+**Pinning to a specific version:**
 
 ```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-```
-
-### Pinning to a specific version
-
-By default `IMAGE_TAG=latest` follows the `main` branch. For stable deployments, pin to a release:
-
-```bash
-IMAGE_TAG=1 docker compose -f docker-compose.prod.yml up -d    # latest 1.x
-IMAGE_TAG=1.2 docker compose -f docker-compose.prod.yml up -d  # latest 1.2.x
+IMAGE_TAG=1 docker compose -f docker-compose.prod.yml up -d     # latest 1.x
+IMAGE_TAG=1.2 docker compose -f docker-compose.prod.yml up -d   # latest 1.2.x
 IMAGE_TAG=1.2.3 docker compose -f docker-compose.prod.yml up -d # exact
 ```
 
 Available images: https://github.com/0xNOCARRIER/garantify/pkgs/container/garantify
 
----
+### C. Building from source
 
-## Configuration
-
-All configuration is done via environment variables. Copy `.env.example` to `.env` to get started.
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `APP_PORT` | yes | `8080` | HTTP listen port |
-| `APP_BASE_URL` | no | `http://localhost:8080` | Public URL used in email links |
-| `RUST_LOG` | no | `info` | Log level (`info`, `debug`, …) |
-| `POSTGRES_USER` | yes | `garantify` | PostgreSQL user |
-| `POSTGRES_PASSWORD` | yes | — | PostgreSQL password |
-| `POSTGRES_DB` | yes | `garantify` | PostgreSQL database name |
-| `DATABASE_URL` | yes | — | Full Postgres connection URL |
-| `SESSION_SECRET` | yes | — | Session signing key (min. 64 chars) — `openssl rand -hex 64` |
-| `ENCRYPTION_KEY` | yes | — | AES-256 key for Slack webhook storage — `openssl rand -base64 32` |
-| `SMTP_HOST` | no | — | SMTP server hostname |
-| `SMTP_PORT` | no | `587` | SMTP port (465 = implicit SSL, 587 = STARTTLS) |
-| `SMTP_USERNAME` | no | — | SMTP username |
-| `SMTP_PASSWORD` | no | — | SMTP password |
-| `MAIL_FROM` | no | — | Sender email address |
-| `UPLOAD_DIR` | no | `/data/uploads` | Directory for uploaded files |
-| `MAX_UPLOAD_MB` | no | `10` | Maximum upload size in megabytes |
-
-> Email and Slack notifications are optional. Without SMTP config the scheduler runs silently.
+```bash
+git clone https://github.com/0xNOCARRIER/garantify
+cd garantify
+./scripts/init.sh
+# Edit .env to fill in SMTP credentials and other settings
+docker compose up -d
+```
 
 ---
 
